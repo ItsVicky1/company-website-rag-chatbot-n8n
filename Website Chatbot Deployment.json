@@ -1,0 +1,639 @@
+{
+  "name": "Website Chatbot Deployment",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "id": "bf78199a-fd0a-4a93-b27f-2912eaf1cbd5",
+      "name": "Website Chat",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        256,
+        1952
+      ],
+      "webhookId": "437681f7-38ee-4d03-83d0-04992ed5fbc9"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\"type\": \"object\", \"properties\": {\"intent\": {\"type\": \"string\", \"enum\": [\"greeting\", \"company_query\", \"job_query\", \"unclear\", \"unrelated\"]}, \"confidence\": {\"type\": \"number\"}}, \"required\": [\"intent\"]}"
+      },
+      "id": "891cf4be-d9fb-4ed3-b73e-4ca53157c636",
+      "name": "Message Classifier",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        736,
+        2176
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Classify the user message into one of these intents:\n- greeting: greetings, hello, hi, how are you\n- company_query: questions about company services, solutions, technologies, projects, support, company information\n- job_query: questions about job openings, hiring, careers, internships, positions, roles, skills required, how to apply\n- unclear: vague, incomplete, or ambiguous messages\n- unrelated: spam, abuse, rude messages, or topics unrelated to company or jobs\n\nClassify accurately and return confidence score."
+        }
+      },
+      "id": "43400321-bbf9-464a-9d7e-34276b9a80fa",
+      "name": "Classify Intent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        536,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.intent }}",
+                    "rightValue": "greeting",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "afd46eba-3665-494a-9b2d-8f8fb3cb0ae3"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.intent }}",
+                    "rightValue": "company_query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "9c68bcac-ff01-48c9-b84b-d27f8ba36484"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.intent }}",
+                    "rightValue": "job_query",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ebc39ac2-8850-4ccd-9444-353254e76ea0"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.intent }}",
+                    "rightValue": "unclear",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7b28336c-5902-4223-9911-004dfb4ee127"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.intent }}",
+                    "rightValue": "unrelated",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ea926aec-e303-44cd-b8ee-1c332259ba84"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d2033f91-dd91-4ae4-8bf6-8d5711669850",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        944,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "output",
+              "value": "Hello! Welcome to our company website. I'm here to help you with:\n\n• Company services, solutions, and technologies\n• Current job openings and career opportunities\n\nHow can I assist you today?",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7b808d7a-1c79-492e-91a2-eae2530869d4",
+      "name": "Greeting Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1304,
+        944
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Website Chat').first().json.chatInput }}",
+        "options": {
+          "systemMessage": "You are a Company Website AI Assistant.\n\nYour role: Help visitors with company services, projects, technologies, support, and company information.\n\nIMPORTANT RULES:\n- Answer ONLY using information from the retrieved context\n- If the answer is not in the retrieved context, reply EXACTLY: \"I couldn't find that information in our company knowledge base.\"\n- Do NOT invent facts or use outside knowledge\n- Keep responses professional, clear, and concise\n- For short queries like \"services\", \"technologies\", or \"company details\", provide a direct answer from the retrieved context"
+        }
+      },
+      "id": "7d695e4b-43a5-444e-a604-a6c5e5a99982",
+      "name": "Answer Company Query",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1200,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Website Chat').first().json.chatInput }}",
+        "options": {
+          "systemMessage": "You are a Company Career AI Assistant.\n\nYour role: Help job seekers with current openings, hiring status, roles, internships, skills required, location, and application process.\n\nIMPORTANT RULES:\n- Answer ONLY using information from the retrieved context\n- If job information is not in the retrieved context, reply EXACTLY: \"I couldn't find current job opening details in our knowledge base.\"\n- Do NOT invent facts or use outside knowledge\n- Keep responses professional, clear, and concise\n- Prioritize career and job-related documents from the knowledge base"
+        }
+      },
+      "id": "1f726f98-e001-4040-ba7c-138655baf579",
+      "name": "Answer Job Query",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1200,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "output",
+              "value": "I'm not sure I understand your question. Could you please rephrase or provide more details? I can help you with company information or job opportunities.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "665afcc5-80ed-43a1-9b5e-aa7bce2188d4",
+      "name": "Unclear Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1304,
+        2544
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "output",
+              "value": "I'm here to help with company-related questions and career opportunities. Please feel free to ask about our services, solutions, or current job openings.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f1f6a7d-db53-4a05-8eec-be3ff89c949d",
+      "name": "Unrelated Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1304,
+        2352
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrieves relevant company information from the knowledge base including services, solutions, technologies, projects, and support",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "my-copmany-profile",
+          "mode": "list",
+          "cachedResultName": "my-copmany-profile"
+        },
+        "topK": 5,
+        "options": {
+          "pineconeNamespace": "my_data"
+        }
+      },
+      "id": "51a17eec-317e-4732-8ca3-eb165f3c00ce",
+      "name": "Retrieve Company Knowledge",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        1296,
+        1360
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "UeR7cC21fbge00FS",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrieves relevant job and career information from the knowledge base including current openings, hiring status, roles, internships, skills required, location, and application process. Prioritizes career-related documents.",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "my-copmany-profile",
+          "mode": "list",
+          "cachedResultName": "my-copmany-profile"
+        },
+        "topK": 5,
+        "options": {
+          "pineconeNamespace": "my_data"
+        }
+      },
+      "id": "8be6c7e1-02fb-483d-a3f0-70724ad42865",
+      "name": "Retrieve Job Knowledge",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        1296,
+        1968
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "UeR7cC21fbge00FS",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "id": "22215fcd-d237-43ec-b7eb-da53d14497c6",
+      "name": "GROQ Classifier Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        480,
+        2176
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "cAiAVqVQOHgltSH9",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {}
+      },
+      "id": "36f35ee9-96af-4aec-bf18-6e58d14535d8",
+      "name": "GROQ Company Agent Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        1360
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "cAiAVqVQOHgltSH9",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "id": "716fbb97-5106-4736-a60e-8764afbba714",
+      "name": "GROQ Job Agent Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        1968
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "cAiAVqVQOHgltSH9",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536,
+          "batchSize": 50
+        }
+      },
+      "id": "6614e1f2-5c37-484e-8fc8-af58ccc47bde",
+      "name": "OpenAI Company Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1376,
+        1568
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "49fkXbzy0Je0SmCW",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536,
+          "batchSize": 50
+        }
+      },
+      "id": "674c414e-1dee-4cf9-8ef2-00ac03cebdb1",
+      "name": "OpenAI Job Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1376,
+        2176
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "49fkXbzy0Je0SmCW",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        2176
+      ],
+      "id": "6693073f-1f9d-4d27-bc2b-a15d785a49f0",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Website Chat": {
+      "main": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message Classifier": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Intent": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Greeting Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Answer Company Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Answer Job Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unclear Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unrelated Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve Company Knowledge": {
+      "ai_tool": [
+        [
+          {
+            "node": "Answer Company Query",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve Job Knowledge": {
+      "ai_tool": [
+        [
+          {
+            "node": "Answer Job Query",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GROQ Classifier Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GROQ Company Agent Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer Company Query",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GROQ Job Agent Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer Job Query",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Company Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Retrieve Company Knowledge",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Job Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Retrieve Job Knowledge",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer Company Query": {
+      "main": [
+        []
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Classify Intent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "49dc0074-8bd8-4ac9-be3a-d8aaced1abbf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3ea3e29f3913716cb6e26c3d458259f8ac7e3786fa39f4e7a88b192f11c86cd"
+  },
+  "id": "5bK8WFAFxHQBqSfF",
+  "tags": []
+}

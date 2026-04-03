@@ -1,0 +1,303 @@
+{
+  "name": "Vector data Save workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "3c8e2c9a-9fc7-4ce0-a0e5-4f04eaebc684",
+      "name": "Check Drive Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -848,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=mimeType='application/pdf' or mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document' or mimeType='text/plain'",
+        "returnAll": true,
+        "filter": {},
+        "options": {}
+      },
+      "id": "00e09512-fdf5-48cd-b98a-32553cdda3e0",
+      "name": "List Drive Files",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -624,
+        16
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "UwkEYagxzSlcPkm2",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "options": {}
+      },
+      "id": "1c2e0b30-2a16-43c0-9480-8af3a2f781a4",
+      "name": "Download File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -400,
+        16
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "UwkEYagxzSlcPkm2",
+          "name": "Google Drive account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const fileName = $input.item.json.name || 'unknown';\nconst updatedDate = $input.item.json.modifiedTime || new Date().toISOString();\n\n// Categorize based on filename keywords\nlet category = 'company';\nconst lowerName = fileName.toLowerCase();\nif (lowerName.includes('career') || lowerName.includes('job') || lowerName.includes('hiring') || lowerName.includes('opening') || lowerName.includes('position')) {\n  category = 'jobs';\n}\n\nreturn {\n  json: {\n    fileName: fileName,\n    updatedDate: updatedDate,\n    category: category\n  },\n  binary: $input.item.binary\n};"
+      },
+      "id": "2302f401-f296-4bb8-a149-bf59593ebabb",
+      "name": "Add Metadata & Categorize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "errorType",
+              "value": "download_failed",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "errorMessage",
+              "value": "={{ $json.error.message }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "fileName",
+              "value": "={{ $('Split Files').item.json.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "32583271-dc4a-42d2-b86a-1c5e9b49f659",
+      "name": "Handle Download Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "my-copmany-profile",
+          "mode": "list",
+          "cachedResultName": "my-copmany-profile"
+        },
+        "embeddingBatchSize": 50,
+        "options": {
+          "clearNamespace": false,
+          "pineconeNamespace": "my_data"
+        }
+      },
+      "id": "5471a5bc-07d3-446c-8063-b3146f6d9de4",
+      "name": "Store in Vector DB",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        -96
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "UeR7cC21fbge00FS",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "binaryMode": "specificField",
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "id": "fddaddca-9300-4097-a327-e015ca188e3f",
+      "name": "Document Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        176,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 200,
+        "options": {}
+      },
+      "id": "eb6545aa-5202-4c60-9771-d4e597b9a318",
+      "name": "Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        256,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536,
+          "batchSize": 25
+        }
+      },
+      "id": "0c228def-7635-4acd-822c-ff4beb6bf27e",
+      "name": "OpenAI Embeddings (Indexing)",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        48,
+        128
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "49fkXbzy0Je0SmCW",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Check Drive Every Hour": {
+      "main": [
+        [
+          {
+            "node": "List Drive Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Drive Files": {
+      "main": [
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Add Metadata & Categorize",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Download Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Metadata & Categorize": {
+      "main": [
+        [
+          {
+            "node": "Store in Vector DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Store in Vector DB",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Document Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Embeddings (Indexing)": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Store in Vector DB",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "efc4dba7-4988-476c-947e-adc05666f6ee",
+  "meta": {
+    "instanceId": "b3ea3e29f3913716cb6e26c3d458259f8ac7e3786fa39f4e7a88b192f11c86cd"
+  },
+  "id": "9tTjQTZueXBQPTR6",
+  "tags": []
+}
